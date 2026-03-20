@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 import requests
 import os
 
@@ -6,7 +6,7 @@ API_BASE = "http://127.0.0.1:8000"
 API_URL = f"{API_BASE}/fraud"
 LOGIN_URL = f"{API_BASE}/login"
 
-st.set_page_config(page_title="AI Multi Bank Fraud Assistant", layout="wide")
+st.set_page_config(page_title="SBI Fraud Investigation Assistant", layout="wide")
 
 st.markdown(
     """
@@ -167,8 +167,8 @@ div[data-testid="stInfo"] {
     unsafe_allow_html=True
 )
 
-st.markdown('<div class="app-title fade-in">AI Multi Bank Fraud Investigation Assistant</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle fade-in">Secure, guided fraud investigation across multiple banks</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-title fade-in">SBI Fraud Investigation Assistant</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-subtitle fade-in">Secure, guided fraud investigation for State Bank of India</div>', unsafe_allow_html=True)
 
 # -------------------------
 # SESSION STATE
@@ -232,7 +232,7 @@ def extract_prompt(text):
             or ln.endswith("?")
             or "provide details about the case" in lower_ln
             or "describe the new fraud case" in lower_ln
-            or "thank you for using the fraud investigation assistant" in lower_ln
+            or "thank you for using the sbi fraud investigation assistant" in lower_ln
         ):
             prompt = ln
             break
@@ -279,7 +279,7 @@ if not st.session_state.logged_in:
 
 # Seed initial assistant prompt on first load
 if st.session_state.logged_in and not st.session_state.chat_history:
-    st.session_state.next_prompt = "Hi there😊 Please provide details about the case."
+    st.session_state.next_prompt = "Please provide details about the SBI fraud case."
 
 # -------------------------
 # DISPLAY CHAT HISTORY
@@ -306,7 +306,7 @@ with col_logout:
         st.session_state.documents_followup_prompt = ""
         st.rerun()
 
-st.markdown('<div class="section-title fade-in">Fraud Investigation Chat</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title fade-in">SBI Fraud Investigation Chat</div>', unsafe_allow_html=True)
 st.markdown('<div class="chat-space">', unsafe_allow_html=True)
 
 if st.session_state.next_prompt:
@@ -382,7 +382,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # USER INPUT
 # -------------------------
 
-user_query = st.chat_input("Describe fraud case or reply Yes / No when asked")
+user_query = st.chat_input("Describe the SBI fraud case or reply Yes / No when asked")
 
 # -------------------------
 # HANDLE USER QUERY
@@ -447,3 +447,4 @@ if user_query:
         })
 
     st.rerun()
+

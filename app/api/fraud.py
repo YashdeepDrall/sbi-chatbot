@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException
+﻿from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from app.services.auth_service import verify_user, verify_user_credentials
-from app.services.fraud_service import detect_fraud
+
+from app.core.config import BASE_DIR, BANKS_DIR, SBI_BANK_ID, SBI_BANK_NAME
 from app.db.mongodb import chat_logs_collection, documents_collection, cases_collection, fs
 from app.ml.vector_store import generate_embedding, search_vector
+from app.services.auth_service import verify_user, verify_user_credentials
+from app.services.fraud_service import detect_fraud
 import datetime
 import uuid
 from bson import ObjectId
@@ -11,9 +13,6 @@ import os
 import re
 
 router = APIRouter()
-
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-BANKS_DIR = os.path.join(BASE_DIR, "banks")
 
 # ------------------------------
 # Chat Utilities
@@ -117,7 +116,7 @@ def sop_based_analysis(query, bank_id):
         lines = [ln for ln in lines if ln.strip() not in {"|", "I"}]
         text = " ".join(lines)
         text = re.sub(r"\s+", " ", text).strip()
-        text = text.replace(" ● ", "\n● ")
+        text = text.replace(" â— ", "\nâ— ")
         text = re.sub(r"\.\s+", ".\n", text)
         text = re.sub(r"\n\d+\.\s*\n?", "\n", text)
         text = re.sub(r"\s+\.", ".", text)
@@ -126,12 +125,12 @@ def sop_based_analysis(query, bank_id):
         text = re.sub(r"\s+,", ",", text)
         text = re.sub(r"\s+:", ":", text)
         text = re.sub(r"(?i)\bAUTOMATED ANNEXURE(S)?\b.*$", "", text).strip()
-        text = re.sub(r"\n● ", "\n\n● ", text).strip()
+        text = re.sub(r"\nâ— ", "\n\nâ— ", text).strip()
         lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
         filtered = []
         for ln in lines:
             lower_ln = ln.lower()
-            stripped = lower_ln.strip("● ").strip()
+            stripped = lower_ln.strip("â— ").strip()
             if stripped in {"automated annexure", "automated annexures", "for"}:
                 continue
             if stripped.startswith("automated annexure"):
@@ -180,6 +179,8 @@ def format_analysis(analysis):
 # ------------------------------
 
 def fetch_relevant_documents(bank_id):
+    if bank_id != SBI_BANK_ID:
+        return []
 
     docs = list(documents_collection.find({
         "bankId": bank_id,
@@ -297,7 +298,7 @@ def fraud_chat(userId: str, query: str, sessionId: str | None = None):
 
 
     # ------------------------------
-    # STEP 1 → New Fraud Analysis
+    # STEP 1 â†’ New Fraud Analysis
     # ------------------------------
 
     if not step or step == "conversation_end":
@@ -306,7 +307,7 @@ def fraud_chat(userId: str, query: str, sessionId: str | None = None):
 
         if not sop_analysis:
             response = (
-                "The content you asked for is not available in the SOP. "
+                f"The content you asked for is not available in the {SBI_BANK_NAME} SOP. "
                 "Please ask a relevant fraud-related query."
             )
             next_step = "conversation_end"
@@ -330,7 +331,7 @@ Do you want the relevant documentation for this fraud case? (Yes/No)
 
 
     # ------------------------------
-    # STEP 2 → Documents
+    # STEP 2 â†’ Documents
     # ------------------------------
 
     elif step == "fetch_documentation":
@@ -368,7 +369,7 @@ I did not get a clear Yes/No. Please reply Yes or No.
 
 
     # ------------------------------
-    # STEP 3 → Report
+    # STEP 3 â†’ Report
     # ------------------------------
 
     elif step == "generate_report":
@@ -410,7 +411,7 @@ I did not get a clear Yes/No. Please reply Yes or No.
 
 
     # ------------------------------
-    # STEP 4 → Historical Docs
+    # STEP 4 â†’ Historical Docs
     # ------------------------------
 
     elif step == "historical_docs":
@@ -444,7 +445,7 @@ I did not get a clear Yes/No. Please reply Yes or No.
 
 
     # ------------------------------
-    # STEP 5 → End
+    # STEP 5 â†’ End
     # ------------------------------
 
     elif step == "final_assistance":
@@ -457,7 +458,7 @@ I did not get a clear Yes/No. Please reply Yes or No.
         elif choice == "no":
 
             response = (
-                "Thank you for using the Fraud Investigation Assistant😊. "
+                "Thank you for using the SBI Fraud Investigation Assistant. "
                 "If you need help again, just type the case details anytime and I will be ready to assist."
             )
             next_step = "conversation_end"
@@ -501,3 +502,4 @@ def login(request: dict):
         raise HTTPException(status_code=401, detail="Invalid userId or password")
 
     return {"userId": user_id, "bankId": bank_id}
+

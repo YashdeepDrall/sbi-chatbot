@@ -1,49 +1,27 @@
-import faiss
-import numpy as np
-from pymongo import MongoClient
-from sentence_transformers import SentenceTransformer
-from pypdf import PdfReader
-import gridfs
 import os
 import re
 
-# -----------------------------
-# Embedding model
-# -----------------------------
+import faiss
+import numpy as np
+from pypdf import PdfReader
+from sentence_transformers import SentenceTransformer
+
+from app.core.config import SBI_BANK_DIR, SBI_BANK_ID
+from app.db.mongodb import documents_collection, fs
+
+
 model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
-# -----------------------------
-# FAISS setup
-# -----------------------------
 vector_dimension = 384
 index = faiss.IndexFlatL2(vector_dimension)
-
-# -----------------------------
-# MongoDB
-# -----------------------------
-client = MongoClient("mongodb://localhost:27017")
-db = client["bank_chatbot"]
-collection = db["documents"]
-
-# GridFS for storing actual PDFs
-fs = gridfs.GridFS(db)
-
-# In-memory vector store
 vector_store = []
 
 
-# -----------------------------
-# Generate embedding
-# -----------------------------
 def generate_embedding(text):
     return model.encode(text)
 
 
-# -----------------------------
-# Extract text from PDF
-# -----------------------------
 def extract_text_from_pdf(file_path):
-
     reader = PdfReader(file_path)
     text = ""
 
@@ -55,26 +33,16 @@ def extract_text_from_pdf(file_path):
     return text
 
 
-# -----------------------------
-# Split SOP by fraud category
-# -----------------------------
 def split_by_category(text):
-
-    pattern = r'([A-Z]{1,3}-\d{2}[\s\S]*?)(?=[A-Z]{1,3}-\d{2}|$)'
+    pattern = r"([A-Z]{1,3}-\d{2}[\s\S]*?)(?=[A-Z]{1,3}-\d{2}|$)"
     matches = re.findall(pattern, text)
+    return [match.strip() for match in matches if match.strip()]
 
-    return [m.strip() for m in matches if m.strip()]
 
-
-# -----------------------------
-# Store PDF in GridFS
-# -----------------------------
-def store_pdf(file_path, bank_id):
-
+def store_pdf(file_path, bank_id=SBI_BANK_ID):
     file_name = os.path.basename(file_path)
 
-    # Check if already stored
-    existing = collection.find_one({
+    existing = documents_collection.find_one({
         "bankId": bank_id,
         "fileName": file_name,
         "isPDF": True
@@ -83,39 +51,42 @@ def store_pdf(file_path, bank_id):
     if existing and "fileId" in existing:
         return existing["fileId"]
 
-    with open(file_path, "rb") as f:
-
+    with open(file_path, "rb") as file_obj:
         file_id = fs.put(
-            f,
+            file_obj,
             filename=file_name,
             bankId=bank_id
         )
 
-    # Store reference in documents collection
-    collection.insert_one({
-        "bankId": bank_id,
-        "fileName": file_name,
-        "fileId": str(file_id),
-        "isPDF": True
-    })
+    documents_collection.update_one(
+        {
+            "bankId": bank_id,
+            "fileName": file_name
+        },
+        {
+            "$set": {
+                "bankId": bank_id,
+                "fileName": file_name,
+                "fileId": str(file_id),
+                "filePath": file_path,
+                "isPDF": True
+            }
+        },
+        upsert=True
+    )
 
     print(f"Stored PDF in MongoDB: {file_name}")
 
     return str(file_id)
 
 
-# -----------------------------
-# Add vector
-# -----------------------------
-def add_vector(embedding, text, bank_id, file_name, file_id):
-
+def add_vector(embedding, text, bank_id, file_name, file_id, source_file=None):
     vector_np = np.array([embedding]).astype("float32")
 
-    # Check duplicate chunk
-    exists = collection.find_one({
+    exists = documents_collection.find_one({
         "bankId": bank_id,
         "fileName": file_name,
-        "text": text[:120]
+        "text": text
     })
 
     if exists:
@@ -129,19 +100,15 @@ def add_vector(embedding, text, bank_id, file_name, file_id):
         "fileName": file_name,
         "text": text,
         "embedding": embedding.tolist(),
-        "fileId": file_id
+        "fileId": file_id,
+        "sourceFile": source_file or file_name
     }
 
     vector_store.append(doc)
+    documents_collection.insert_one(doc)
 
-    collection.insert_one(doc)
 
-
-# -----------------------------
-# Rebuild FAISS index
-# -----------------------------
 def rebuild_vector_index():
-
     global vector_store
 
     print("Rebuilding FAISS index from MongoDB...")
@@ -149,102 +116,78 @@ def rebuild_vector_index():
     vector_store = []
     index.reset()
 
-    docs = list(collection.find({"embedding": {"$exists": True}}))
+    docs = list(documents_collection.find({
+        "bankId": SBI_BANK_ID,
+        "embedding": {"$exists": True}
+    }))
 
     for doc in docs:
-
         embedding = np.array(doc["embedding"]).astype("float32")
-
         index.add(np.array([embedding]))
-
         vector_store.append(doc)
 
-    print(f"Loaded {len(vector_store)} vectors from MongoDB")
+    print(f"Loaded {len(vector_store)} SBI vectors from MongoDB")
 
 
-# -----------------------------
-# Load bank documents
-# -----------------------------
-def load_documents_from_bank_folders():
-
-    base_path = "banks"
-
-    if not os.path.exists(base_path):
-        print("Banks folder not found")
+def load_sbi_documents():
+    if not os.path.exists(SBI_BANK_DIR):
+        print("SBI folder not found")
         return
 
-    for bank in os.listdir(base_path):
-
-        bank_path = os.path.join(base_path, bank)
-
-        if not os.path.isdir(bank_path):
+    for file_name in os.listdir(SBI_BANK_DIR):
+        if not file_name.lower().endswith(".pdf"):
             continue
 
-        print(f"Checking documents for bank: {bank}")
+        file_path = os.path.join(SBI_BANK_DIR, file_name)
+        print(f"Checking SBI document: {file_name}")
 
-        for file in os.listdir(bank_path):
+        file_id = store_pdf(file_path, SBI_BANK_ID)
 
-            if not file.lower().endswith(".pdf"):
+        exists = documents_collection.find_one({
+            "bankId": SBI_BANK_ID,
+            "$or": [
+                {"sourceFile": file_name},
+                {"fileName": {"$regex": f"^{re.escape(file_name)}_block"}}
+            ],
+            "embedding": {"$exists": True}
+        })
+
+        if exists:
+            print(f"Skipping already indexed file: {file_name}")
+            continue
+
+        try:
+            text = extract_text_from_pdf(file_path)
+
+            if not text.strip():
+                print(f"Skipped empty PDF: {file_name}")
                 continue
 
-            file_path = os.path.join(bank_path, file)
+            blocks = split_by_category(text) or [text]
 
-            # Store PDF in GridFS
-            file_id = store_pdf(file_path, bank)
+            for index_number, block in enumerate(blocks, start=1):
+                embedding = generate_embedding(block)
+                block_file_name = f"{file_name}_block{index_number}"
 
-            # Check if chunks already exist
-            exists = collection.find_one({
-                "bankId": bank,
-                "fileName": {"$regex": f"^{file}_block"}
-            })
+                add_vector(
+                    embedding,
+                    block,
+                    SBI_BANK_ID,
+                    block_file_name,
+                    file_id,
+                    source_file=file_name
+                )
 
-            if exists:
-                print(f"Skipping already indexed file: {file}")
-                continue
+            print(f"Indexed {len(blocks)} blocks from {file_name}")
 
-            try:
-
-                text = extract_text_from_pdf(file_path)
-
-                if text.strip() == "":
-                    print(f"Skipped empty PDF: {file}")
-                    continue
-
-                blocks = split_by_category(text)
-
-                if not blocks:
-                    blocks = [text]
-
-                for i, block in enumerate(blocks):
-
-                    embedding = generate_embedding(block)
-
-                    block_file_name = f"{file}_block{i+1}"
-
-                    add_vector(
-                        embedding,
-                        block,
-                        bank,
-                        block_file_name,
-                        file_id
-                    )
-
-                print(f"Indexed {len(blocks)} blocks from {file}")
-
-            except Exception as e:
-
-                print(f"Error processing {file}: {e}")
+        except Exception as exc:
+            print(f"Error processing {file_name}: {exc}")
 
 
-# -----------------------------
-# Search vector
-# -----------------------------
 def search_vector(query_embedding, bank_id, top_k=3):
-
     results = []
 
     for doc in vector_store:
-
         if doc["bankId"] != bank_id:
             continue
 
