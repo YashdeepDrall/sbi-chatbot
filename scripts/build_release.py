@@ -16,9 +16,15 @@ PRIVATE_TEMP_DIR = BUILD_DIR / "temp"
 RELEASE_DIR = DIST_DIR / "sbi-release"
 PRIVATE_SOURCE_RELATIVE_PATHS = {
     Path("app/api/fraud.py"),
+    Path("app/runtime/api_runtime.py"),
+    Path("app/runtime/ui_runtime.py"),
+    Path("app/services/auth_service.py"),
+    Path("app/services/chat_service.py"),
+    Path("app/services/document_service.py"),
     Path("app/services/fraud_service.py"),
     Path("app/services/rag_service.py"),
     Path("app/services/llm_service.py"),
+    Path("app/ml/embeddings.py"),
     Path("app/ml/vector_store.py"),
 }
 
@@ -26,7 +32,14 @@ PRIVATE_SOURCE_RELATIVE_PATHS = {
 def clean_directories() -> None:
     for path in [PRIVATE_BUILD_DIR, PRIVATE_TEMP_DIR, RELEASE_DIR]:
         if path.exists():
-            shutil.rmtree(path)
+            try:
+                shutil.rmtree(path)
+            except PermissionError as exc:
+                raise SystemExit(
+                    "Build output is locked by a running SBI release process. "
+                    "Close the local backend and Streamlit windows that are using dist/sbi-release, "
+                    "then run the build again."
+                ) from exc
 
     DIST_DIR.mkdir(parents=True, exist_ok=True)
     PRIVATE_BUILD_DIR.mkdir(parents=True, exist_ok=True)
@@ -103,11 +116,8 @@ def build_release_folder() -> None:
         "app/db/__init__.py",
         "app/db/mongodb.py",
         "app/ml/__init__.py",
-        "app/ml/embeddings.py",
+        "app/runtime/__init__.py",
         "app/services/__init__.py",
-        "app/services/auth_service.py",
-        "app/services/chat_service.py",
-        "app/services/document_service.py",
         "scripts/setup_sbi_db.py",
         "deploy/install_release.sh",
         "deploy/run_backend.sh",

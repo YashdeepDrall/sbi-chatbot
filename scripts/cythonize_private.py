@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 from Cython.Build import cythonize
@@ -10,12 +11,57 @@ from setuptools import Extension, setup
 ROOT_DIR = Path(__file__).resolve().parents[1]
 
 PRIVATE_MODULES = [
-    ("app.api.fraud", ROOT_DIR / "app" / "api" / "fraud.py"),
-    ("app.services.fraud_service", ROOT_DIR / "app" / "services" / "fraud_service.py"),
-    ("app.services.rag_service", ROOT_DIR / "app" / "services" / "rag_service.py"),
-    ("app.services.llm_service", ROOT_DIR / "app" / "services" / "llm_service.py"),
-    ("app.ml.vector_store", ROOT_DIR / "app" / "ml" / "vector_store.py"),
+    ("app.api.fraud", Path("app") / "api" / "fraud.py"),
+    ("app.runtime.api_runtime", Path("app") / "runtime" / "api_runtime.py"),
+    ("app.runtime.ui_runtime", Path("app") / "runtime" / "ui_runtime.py"),
+    ("app.services.auth_service", Path("app") / "services" / "auth_service.py"),
+    ("app.services.chat_service", Path("app") / "services" / "chat_service.py"),
+    ("app.services.document_service", Path("app") / "services" / "document_service.py"),
+    ("app.services.fraud_service", Path("app") / "services" / "fraud_service.py"),
+    ("app.services.rag_service", Path("app") / "services" / "rag_service.py"),
+    ("app.services.llm_service", Path("app") / "services" / "llm_service.py"),
+    ("app.ml.embeddings", Path("app") / "ml" / "embeddings.py"),
+    ("app.ml.vector_store", Path("app") / "ml" / "vector_store.py"),
 ]
+
+
+def ensure_windows_build_tools_on_path() -> None:
+    if os.name != "nt":
+        return
+
+    path_entries = []
+
+    search_roots = [
+        Path("C:/Program Files (x86)/Microsoft Visual Studio"),
+        Path("C:/Program Files/Microsoft Visual Studio"),
+    ]
+
+    candidates = []
+    for root in search_roots:
+        if not root.exists():
+            continue
+        candidates.extend(root.glob("*/BuildTools/VC/Tools/MSVC/*/bin/HostX86/x64"))
+        candidates.extend(root.glob("*/BuildTools/VC/Tools/MSVC/*/bin/HostX64/x64"))
+
+    if not candidates:
+        selected = None
+    else:
+        selected = sorted(candidates, reverse=True)[0]
+        path_entries.append(str(selected))
+
+    sdk_root = Path("C:/Program Files (x86)/Windows Kits/10/bin")
+    if sdk_root.exists():
+        sdk_candidates = list(sdk_root.glob("*/x64"))
+        if sdk_candidates:
+            path_entries.append(str(sorted(sdk_candidates, reverse=True)[0]))
+
+    if not path_entries:
+        return
+
+    current_path = os.environ.get("PATH", "")
+    missing_entries = [entry for entry in path_entries if entry.lower() not in current_path.lower()]
+    if missing_entries:
+        os.environ["PATH"] = os.pathsep.join(missing_entries + [current_path])
 
 
 def main() -> None:
@@ -24,10 +70,13 @@ def main() -> None:
     parser.add_argument("--build-temp", required=True, help="Temporary build directory.")
     args = parser.parse_args()
 
+    ensure_windows_build_tools_on_path()
+
     extensions = [
         Extension(
             name=module_name,
             sources=[str(source_path)],
+            extra_link_args=["/MANIFEST:NO"] if os.name == "nt" else [],
         )
         for module_name, source_path in PRIVATE_MODULES
     ]
