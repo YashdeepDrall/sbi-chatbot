@@ -10,7 +10,6 @@ from setuptools import Extension, setup
 ROOT_DIR = Path(__file__).resolve().parents[1]
 
 PRIVATE_MODULES = [
-    ("streamlit_app", ROOT_DIR / "streamlit_app.py"),
     ("app.api.fraud", ROOT_DIR / "app" / "api" / "fraud.py"),
     ("app.services.fraud_service", ROOT_DIR / "app" / "services" / "fraud_service.py"),
     ("app.services.rag_service", ROOT_DIR / "app" / "services" / "rag_service.py"),

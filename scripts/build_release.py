@@ -15,7 +15,6 @@ PRIVATE_BUILD_DIR = BUILD_DIR / "private_modules"
 PRIVATE_TEMP_DIR = BUILD_DIR / "temp"
 RELEASE_DIR = DIST_DIR / "sbi-release"
 PRIVATE_SOURCE_RELATIVE_PATHS = {
-    Path("streamlit_app.py"),
     Path("app/api/fraud.py"),
     Path("app/services/fraud_service.py"),
     Path("app/services/rag_service.py"),
@@ -94,6 +93,7 @@ def build_release_folder() -> None:
         "requirements.txt",
         "requirements-build.txt",
         ".gitignore",
+        "streamlit_app.py",
         "ui_entry.py",
         "app/__init__.py",
         "app/main.py",

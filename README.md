@@ -73,6 +73,15 @@ GitHub Actions workflow file:
 
 - `.github/workflows/build-and-deploy.yml`
 
+Current auto-deploy test branch:
+
+- `test-chat`
+
+Current behavior without a real server:
+
+- GitHub Actions will still build the release artifact on `test-chat`
+- SSH deploy steps stay skipped until you replace the placeholder host and set the SSH key secret
+
 Current placeholder cloud values inside the workflow:
 
 - SSH host: `203.0.113.10`

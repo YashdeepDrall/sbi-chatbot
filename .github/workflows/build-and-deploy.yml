@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - test-chat
 
 env:
   CLOUD_SSH_HOST: 203.0.113.10
@@ -33,7 +33,16 @@ jobs:
       - name: Build release artifact
         run: python scripts/build_release.py
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbi-release
+          path: |
+            dist/sbi-release.zip
+            dist/sbi-release.tar.gz
+
       - name: Configure SSH
+        if: ${{ secrets.CLOUD_SSH_PRIVATE_KEY != '' && env.CLOUD_SSH_HOST != '203.0.113.10' }}
         run: |
           mkdir -p ~/.ssh
           printf "%s" "${{ secrets.CLOUD_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
@@ -41,10 +50,12 @@ jobs:
           ssh-keyscan -p "${CLOUD_SSH_PORT}" "${CLOUD_SSH_HOST}" >> ~/.ssh/known_hosts
 
       - name: Upload release archive
+        if: ${{ secrets.CLOUD_SSH_PRIVATE_KEY != '' && env.CLOUD_SSH_HOST != '203.0.113.10' }}
         run: |
           scp -P "${CLOUD_SSH_PORT}" dist/sbi-release.tar.gz "${CLOUD_SSH_USER}@${CLOUD_SSH_HOST}:/tmp/sbi-release.tar.gz"
 
       - name: Deploy release on server
+        if: ${{ secrets.CLOUD_SSH_PRIVATE_KEY != '' && env.CLOUD_SSH_HOST != '203.0.113.10' }}
         run: |
           ssh -p "${CLOUD_SSH_PORT}" "${CLOUD_SSH_USER}@${CLOUD_SSH_HOST}" "\
             set -euo pipefail && \
