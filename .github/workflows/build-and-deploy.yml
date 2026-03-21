@@ -11,6 +11,7 @@ env:
   CLOUD_SSH_PORT: "22"
   CLOUD_SSH_USER: root
   CLOUD_DEPLOY_PATH: /opt/sbi-chatbot
+  CLOUD_SSH_PRIVATE_KEY: ${{ secrets.CLOUD_SSH_PRIVATE_KEY }}
 
 jobs:
   build-and-deploy:
@@ -42,20 +43,20 @@ jobs:
             dist/sbi-release.tar.gz
 
       - name: Configure SSH
-        if: ${{ secrets.CLOUD_SSH_PRIVATE_KEY != '' && env.CLOUD_SSH_HOST != '203.0.113.10' }}
+        if: ${{ env.CLOUD_SSH_PRIVATE_KEY != '' && env.CLOUD_SSH_HOST != '203.0.113.10' }}
         run: |
           mkdir -p ~/.ssh
-          printf "%s" "${{ secrets.CLOUD_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          printf "%s" "${CLOUD_SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p "${CLOUD_SSH_PORT}" "${CLOUD_SSH_HOST}" >> ~/.ssh/known_hosts
 
       - name: Upload release archive
-        if: ${{ secrets.CLOUD_SSH_PRIVATE_KEY != '' && env.CLOUD_SSH_HOST != '203.0.113.10' }}
+        if: ${{ env.CLOUD_SSH_PRIVATE_KEY != '' && env.CLOUD_SSH_HOST != '203.0.113.10' }}
         run: |
           scp -P "${CLOUD_SSH_PORT}" dist/sbi-release.tar.gz "${CLOUD_SSH_USER}@${CLOUD_SSH_HOST}:/tmp/sbi-release.tar.gz"
 
       - name: Deploy release on server
-        if: ${{ secrets.CLOUD_SSH_PRIVATE_KEY != '' && env.CLOUD_SSH_HOST != '203.0.113.10' }}
+        if: ${{ env.CLOUD_SSH_PRIVATE_KEY != '' && env.CLOUD_SSH_HOST != '203.0.113.10' }}
         run: |
           ssh -p "${CLOUD_SSH_PORT}" "${CLOUD_SSH_USER}@${CLOUD_SSH_HOST}" "\
             set -euo pipefail && \
