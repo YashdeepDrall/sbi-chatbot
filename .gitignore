@@ -59,11 +59,25 @@ coverage.xml
 
 # Local Logs
 *.log
+logs/
 
 # Vector Store / ML local artifacts
 *.faiss
 *.pkl
 *.index
+
+# Native build outputs
+*.pyd
+*.so
+*.dll
+*.dylib
+*.obj
+*.lib
+*.exp
+*.pdb
+
+# Runtime folders
+.runtime-venv/
 
 # Project Data
 # Ignore actual PDFs in the banks folder to keep SOPs private
