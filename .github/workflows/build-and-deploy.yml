@@ -14,7 +14,33 @@ env:
   CLOUD_SSH_PRIVATE_KEY: ${{ secrets.CLOUD_SSH_PRIVATE_KEY }}
 
 jobs:
-  build-and-deploy:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-build.txt
+
+      - name: Build Windows release artifact
+        run: python scripts/build_release.py
+
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbi-release-windows
+          path: dist/sbi-release.zip
+
+  build-and-deploy-linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,13 +57,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-build.txt
 
-      - name: Build release artifact
+      - name: Build Linux release artifact
         run: python scripts/build_release.py
 
-      - name: Upload build artifact
+      - name: Upload Linux build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sbi-release
+          name: sbi-release-linux
           path: |
             dist/sbi-release.zip
             dist/sbi-release.tar.gz
