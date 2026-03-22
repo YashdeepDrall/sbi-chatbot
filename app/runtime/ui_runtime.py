@@ -396,9 +396,9 @@ def handle_user_query(user_query):
 
 
 def run_app():
-    st.set_page_config(page_title="SBI Fraud Investigation Assistant", layout="wide")
+    st.set_page_config(page_title="SBI Fraud Investigation Assistant CHATBOT", layout="wide")
     st.markdown(GLOBAL_STYLES, unsafe_allow_html=True)
-    st.markdown('<div class="app-title fade-in">SBI Fraud Investigation Assistant</div>', unsafe_allow_html=True)
+    st.markdown('<div class="app-title fade-in">SBI Fraud Investigation Assistant CHATBOT</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="app-subtitle fade-in">Secure, guided fraud investigation for State Bank of India</div>',
         unsafe_allow_html=True,

@@ -5,7 +5,7 @@ from app.ml.vector_store import rebuild_vector_index, load_sbi_documents
 
 
 def build_application() -> FastAPI:
-    app = FastAPI(title="SBI Fraud Investigation Assistant")
+    app = FastAPI(title="SBI Fraud Investigation Assistant Chatbot API")
 
     @app.on_event("startup")
     def startup_event():
