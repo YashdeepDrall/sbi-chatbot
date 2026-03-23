@@ -5,6 +5,7 @@ from app.core.config import BASE_DIR, BANKS_DIR, SBI_BANK_ID, SBI_BANK_NAME
 from app.db.mongodb import chat_logs_collection, documents_collection, cases_collection, fs
 from app.ml.vector_store import generate_embedding, search_vector
 from app.services.auth_service import verify_user, verify_user_credentials
+from app.services.bootstrap_service import get_bootstrap_status
 from app.services.fraud_service import detect_fraud
 import datetime
 import uuid
@@ -260,6 +261,32 @@ def fetch_historical_docs():
 def fraud_chat(userId: str, query: str, sessionId: str | None = None):
 
     bank_id = verify_user(userId)
+    bootstrap_status = get_bootstrap_status()
+
+    if bootstrap_status.get("error"):
+        raise HTTPException(
+            status_code=503,
+            detail="System initialization failed. Please contact support.",
+        )
+
+    if not bootstrap_status.get("ready"):
+        if not sessionId:
+            sessionId = f"{userId}_{uuid.uuid4().hex}"
+
+        return {
+            "user": userId,
+            "bank": bank_id,
+            "query": query,
+            "fraud_analysis": {},
+            "chatbot_response": (
+                "The SBI Fraud Investigation Assistant is starting up. "
+                "Please retry your query in a few moments."
+            ),
+            "next_step": "conversation_end",
+            "sessionId": sessionId,
+            "fraud_category": "",
+            "documents": [],
+        }
 
     if not sessionId:
         sessionId = f"{userId}_{uuid.uuid4().hex}"

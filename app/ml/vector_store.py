@@ -4,22 +4,14 @@ import re
 import faiss
 import numpy as np
 from pypdf import PdfReader
-from sentence_transformers import SentenceTransformer
 
 from app.core.config import SBI_BANK_DIR, SBI_BANK_ID
 from app.db.mongodb import documents_collection, fs
-
-
-model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+from app.ml.embeddings import generate_embedding
 
 vector_dimension = 384
 index = faiss.IndexFlatL2(vector_dimension)
 vector_store = []
-
-
-def generate_embedding(text):
-    return model.encode(text)
-
 
 def extract_text_from_pdf(file_path):
     reader = PdfReader(file_path)

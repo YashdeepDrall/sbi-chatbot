@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock, Thread
 
 from pymongo import ASCENDING
 
@@ -13,6 +14,16 @@ from app.db.mongodb import (
     documents_collection,
     users_collection,
 )
+from app.ml.vector_store import load_sbi_documents, rebuild_vector_index
+
+
+_bootstrap_lock = Lock()
+_bootstrap_state = {
+    "started": False,
+    "ready": False,
+    "error": "",
+    "mode": "sync",
+}
 
 
 def ensure_sbi_bootstrap() -> None:
@@ -74,3 +85,46 @@ def ensure_sbi_bootstrap() -> None:
             },
             upsert=True,
         )
+
+
+def initialize_sbi_runtime() -> None:
+    with _bootstrap_lock:
+        _bootstrap_state["started"] = True
+        _bootstrap_state["ready"] = False
+        _bootstrap_state["error"] = ""
+
+    try:
+        rebuild_vector_index()
+        load_sbi_documents()
+        rebuild_vector_index()
+    except Exception as exc:
+        with _bootstrap_lock:
+            _bootstrap_state["error"] = str(exc)
+        raise
+
+    with _bootstrap_lock:
+        _bootstrap_state["ready"] = True
+        _bootstrap_state["error"] = ""
+
+
+def _run_background_runtime_bootstrap() -> None:
+    try:
+        initialize_sbi_runtime()
+    except Exception as exc:
+        print(f"Background runtime bootstrap failed: {exc}")
+
+
+def start_sbi_runtime_in_background() -> None:
+    with _bootstrap_lock:
+        if _bootstrap_state["started"] and not _bootstrap_state["error"]:
+            return
+        _bootstrap_state["started"] = True
+        _bootstrap_state["ready"] = False
+        _bootstrap_state["error"] = ""
+
+    Thread(target=_run_background_runtime_bootstrap, daemon=True).start()
+
+
+def get_bootstrap_status() -> dict:
+    with _bootstrap_lock:
+        return dict(_bootstrap_state)

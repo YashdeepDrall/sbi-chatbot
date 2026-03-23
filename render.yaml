@@ -16,6 +16,8 @@ services:
         sync: false
       - key: MONGO_DB_NAME
         value: sbi_fraud_chatbot
+      - key: BOOTSTRAP_MODE
+        value: background
       - key: SBI_DEFAULT_USER_ID
         value: sbi001
       - key: SBI_DEFAULT_PASSWORD
