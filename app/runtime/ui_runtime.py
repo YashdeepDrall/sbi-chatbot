@@ -396,9 +396,9 @@ def handle_user_query(user_query):
 
 
 def run_app():
-    st.set_page_config(page_title="SBI Fraud Investigation Assistant CHATBOT", layout="wide")
+    st.set_page_config(page_title="SBI Fraud Investigation Assistant", layout="wide")
     st.markdown(GLOBAL_STYLES, unsafe_allow_html=True)
-    st.markdown('<div class="app-title fade-in">SBI Fraud Investigation Assistant CHATBOT</div>', unsafe_allow_html=True)
+    st.markdown('<div class="app-title fade-in">SBI Fraud Investigation Assistant</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="app-subtitle fade-in">Secure, guided fraud investigation for State Bank of India</div>',
         unsafe_allow_html=True,
@@ -410,7 +410,7 @@ def run_app():
         render_login()
 
     if st.session_state.logged_in and not st.session_state.chat_history:
-        st.session_state.next_prompt = "Please provide details about the SBI fraud case."
+        st.session_state.next_prompt = "Hello😊 Please provide details about the SBI fraud case."
 
     col_spacer, col_reset, col_logout = st.columns([6, 1, 1])
     with col_reset:

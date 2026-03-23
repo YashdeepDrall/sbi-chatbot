@@ -425,7 +425,7 @@ Historical Fraud Case References:
 
 {hist_docs}
 
-Is there anything else I can help you with?
+Is there anything else I can help you with? (Yes/No)
 """
             next_step = "final_assistance"
 
@@ -434,7 +434,7 @@ Is there anything else I can help you with?
             response = """
 Skipping historical documents.
 
-Is there anything else I can help you with?
+Is there anything else I can help you with? (Yes/No)
 """
             next_step = "final_assistance"
         else:
@@ -452,13 +452,13 @@ I did not get a clear Yes/No. Please reply Yes or No.
 
         if choice == "yes":
 
-            response = "Okay. Please provide details about the case."
+            response = "Okay😊 Please provide details about the case."
             next_step = "conversation_end"
 
         elif choice == "no":
 
             response = (
-                "Thank you for using the SBI Fraud Investigation Assistant. "
+                "Thank you😊 for using the SBI Fraud Investigation Assistant. "
                 "If you need help again, just type the case details anytime and I will be ready to assist."
             )
             next_step = "conversation_end"
