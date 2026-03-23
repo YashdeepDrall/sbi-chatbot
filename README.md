@@ -92,3 +92,20 @@ Current placeholder cloud values inside the workflow:
 Required GitHub secret:
 
 - `CLOUD_SSH_PRIVATE_KEY`
+
+## Render deployment
+
+Render source deployment is configured in:
+
+- `render.yaml`
+
+Recommended Render layout:
+
+- `sbi-chatbot-api` as the backend web service
+- `sbi-chatbot-ui` as the Streamlit web service
+
+Important notes:
+
+- Set `MONGO_URL` in Render to an external MongoDB connection string such as MongoDB Atlas
+- The backend now auto-seeds the default SBI user and required indexes on startup
+- The Streamlit UI reads `API_BASE_URL` or `API_HOSTPORT`, so it can call the backend on Render without using localhost

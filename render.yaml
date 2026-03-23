@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: sbi-chatbot-api
+    runtime: python
+    plan: free
+    region: singapore
+    branch: test-chat
+    autoDeployTrigger: commit
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash scripts/render_start_api.sh
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: MONGO_URL
+        sync: false
+      - key: MONGO_DB_NAME
+        value: sbi_fraud_chatbot
+      - key: SBI_DEFAULT_USER_ID
+        value: sbi001
+      - key: SBI_DEFAULT_PASSWORD
+        value: "0000"
+
+  - type: web
+    name: sbi-chatbot-ui
+    runtime: python
+    plan: free
+    region: singapore
+    branch: test-chat
+    autoDeployTrigger: commit
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash scripts/render_start_ui.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: API_HOSTPORT
+        fromService:
+          name: sbi-chatbot-api
+          type: web
+          property: hostport

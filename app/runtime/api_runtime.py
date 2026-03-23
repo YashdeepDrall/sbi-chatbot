@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.api import fraud
 from app.ml.vector_store import rebuild_vector_index, load_sbi_documents
+from app.services.bootstrap_service import ensure_sbi_bootstrap
 
 
 def build_application() -> FastAPI:
@@ -16,6 +17,7 @@ def build_application() -> FastAPI:
         """
         print("Starting up system...")
 
+        ensure_sbi_bootstrap()
         rebuild_vector_index()
         load_sbi_documents()
         print("System ready. SBI vector index built and SBI PDFs indexed if any.")

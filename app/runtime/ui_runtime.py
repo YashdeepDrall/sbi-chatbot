@@ -4,7 +4,19 @@ import requests
 import streamlit as st
 
 
-API_BASE = "http://127.0.0.1:8000"
+api_base_override = os.getenv("API_BASE_URL", "").strip()
+api_hostport = os.getenv("API_HOSTPORT", "").strip()
+
+if api_base_override:
+    API_BASE = api_base_override.rstrip("/")
+elif api_hostport:
+    if api_hostport.startswith(("http://", "https://")):
+        API_BASE = api_hostport.rstrip("/")
+    else:
+        API_BASE = f"http://{api_hostport}".rstrip("/")
+else:
+    API_BASE = "http://127.0.0.1:8000"
+
 API_URL = f"{API_BASE}/fraud"
 LOGIN_URL = f"{API_BASE}/login"
 
