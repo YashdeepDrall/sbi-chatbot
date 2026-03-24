@@ -13,7 +13,11 @@ elif api_hostport:
     if api_hostport.startswith(("http://", "https://")):
         API_BASE = api_hostport.rstrip("/")
     else:
-        API_BASE = f"http://{api_hostport}".rstrip("/")
+        api_host = api_hostport.split(":", 1)[0].strip()
+        if api_host and "." not in api_host and api_host not in {"127.0.0.1", "localhost"}:
+            API_BASE = f"https://{api_host}.onrender.com"
+        else:
+            API_BASE = f"http://{api_hostport}".rstrip("/")
 else:
     API_BASE = "http://127.0.0.1:8000"
 
